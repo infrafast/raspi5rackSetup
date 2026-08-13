@@ -13,7 +13,7 @@ Environment=XAUTHORITY=/home/pi/.Xauthority
 EnvironmentFile=/etc/default/qlcplus
 ExecStartPre=/home/pi/interval/scripts/check-qlc-workspace.sh
 ExecStart=/usr/local/bin/qlcplus-run
-Restart=on-failure
+Restart=always
 RestartSec=3
 TimeoutStopSec=10
 
