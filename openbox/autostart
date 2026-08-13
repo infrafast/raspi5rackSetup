@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Desktop manager
+/usr/bin/pcmanfm --desktop &
+
+# Taskbar
+/usr/bin/tint2 &
+
+# Terminal
+/usr/bin/xterm &
+
+# System monitor
+/usr/bin/xterm -geometry 120x40+0+0 -e /usr/bin/btop &

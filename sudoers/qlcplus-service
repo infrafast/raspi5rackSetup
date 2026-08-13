@@ -1,0 +1,5 @@
+pi ALL=(root) NOPASSWD: /usr/bin/systemctl start qlcplus.service
+pi ALL=(root) NOPASSWD: /usr/bin/systemctl stop qlcplus.service
+pi ALL=(root) NOPASSWD: /usr/bin/systemctl restart qlcplus.service
+pi ALL=(root) NOPASSWD: /usr/bin/systemctl disable qlcplus.service
+pi ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now qlcplus.service

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+read -r -a QLCPLUS_ARGS <<< "${QLCPLUS_OPTIONS:-}"
+exec /usr/bin/qlcplus-qml "${QLCPLUS_ARGS[@]}" --open "$QLCPLUS_PROJECT"

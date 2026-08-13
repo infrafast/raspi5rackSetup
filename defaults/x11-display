@@ -1,0 +1,4 @@
+# Supported values:
+#   1024x768  = original/default resolution
+#   1368x768  = wide desktop used for VNC / QLC+
+SCREEN_RESOLUTION="1368x768"

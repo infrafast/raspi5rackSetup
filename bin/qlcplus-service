@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SERVICE=qlcplus.service
+
+run_systemctl() {
+    sudo -n /usr/bin/systemctl "$@" "$SERVICE"
+}
+
+case "${1:-}" in
+    start)
+        run_systemctl start
+        ;;
+    stop)
+        run_systemctl stop
+        ;;
+    restart)
+        run_systemctl restart
+        ;;
+    status)
+        /usr/bin/systemctl status "$SERVICE" --no-pager
+        ;;
+    logs)
+        /usr/bin/journalctl -u "$SERVICE" -f
+        ;;
+    auto)
+        sudo -n /usr/bin/systemctl enable --now "$SERVICE"
+        echo "qlcplus auto-start enabled and service started."
+        ;;
+    noauto)
+        run_systemctl disable
+        echo "qlcplus auto-start disabled; current process state unchanged."
+        ;;
+    last-state)
+        echo "Enabled: $(/usr/bin/systemctl is-enabled "$SERVICE" 2>/dev/null || true)"
+        echo "Active : $(/usr/bin/systemctl is-active "$SERVICE" 2>/dev/null || true)"
+        ;;
+    health)
+        if /usr/bin/systemctl is-active --quiet "$SERVICE"; then
+            echo "QLC+ is healthy."
+        else
+            echo "QLC+ is not running." >&2
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Usage: qlcplus-service {start|stop|restart|status|logs|auto|noauto|last-state|health}" >&2
+        exit 1
+        ;;
+esac

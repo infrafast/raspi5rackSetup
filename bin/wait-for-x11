@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export DISPLAY="${DISPLAY:-:0}"
+export XAUTHORITY="${XAUTHORITY:-/home/pi/.Xauthority}"
+
+TIMEOUT="${WAIT_FOR_X11_TIMEOUT:-30}"
+START=$SECONDS
+
+until /usr/bin/xdpyinfo >/dev/null 2>&1; do
+    if (( SECONDS - START >= TIMEOUT )); then
+        echo "ERROR: X11 display $DISPLAY not ready after ${TIMEOUT}s" >&2
+        exit 1
+    fi
+    sleep 0.25
+done

@@ -1,0 +1,21 @@
+[Unit]
+Description=QLC+ 5
+After=x11vnc.service
+Requires=x11vnc.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+Environment=HOME=/home/pi
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+EnvironmentFile=/etc/default/qlcplus
+ExecStartPre=/home/pi/interval/scripts/check-qlc-workspace.sh
+ExecStart=/usr/local/bin/qlcplus-run
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+
+[Install]
+WantedBy=graphical.target

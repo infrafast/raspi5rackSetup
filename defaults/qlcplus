@@ -1,0 +1,2 @@
+QLCPLUS_OPTIONS='-3 --web --web-auth'
+QLCPLUS_PROJECT='/home/pi/interval/QLCfiles/intervalPI5.qxw'
