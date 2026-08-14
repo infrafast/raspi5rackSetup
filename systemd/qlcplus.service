@@ -12,6 +12,8 @@ Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/pi/.Xauthority
 ExecStartPre=/home/pi/interval/scripts/check-qlc-workspace.sh
 ExecStart=/usr/bin/qlcplus-qml -3 --web --web-auth --remote --open /home/pi/interval/QLCfiles/intervalPI5.qxw
+#execute la version de dev
+#ExecStart=/usr/bin/env LD_LIBRARY_PATH=/opt/qlcplus5-dev/usr/lib /opt/qlcplus5-dev/usr/bin/qlcplus5dev -3 --web --web-auth --remote --open /home/pi/interval/QLCfiles/intervalPI5.qxw
 Restart=always
 RestartSec=3
 TimeoutStopSec=10
