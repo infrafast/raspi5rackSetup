@@ -62,7 +62,6 @@ sudo reboot
 ## Main configuration files
 
 - `/etc/default/x11-display`
-- `/etc/default/qlcplus`
 
 Change resolution by editing `SCREEN_RESOLUTION` in `/etc/default/x11-display`, then restart:
 
@@ -70,9 +69,10 @@ Change resolution by editing `SCREEN_RESOLUTION` in `/etc/default/x11-display`, 
 sudo systemctl restart x11-display-setup.service
 ```
 
-Change QLC+ flags/project in `/etc/default/qlcplus`, then:
+QLC+ is launched directly by `/etc/systemd/system/qlcplus.service`. To change its flags or project, edit its `ExecStart` line, then run:
 
 ```bash
+sudo systemctl daemon-reload
 qlcplus-service restart
 ```
 

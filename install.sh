@@ -46,13 +46,12 @@ require_file "$TARGET_HOME/.vnc/passwd"
 
 install -o root -g root -m 0755 "$SCRIPT_DIR/bin/wait-for-x11" /usr/local/bin/wait-for-x11
 install -o root -g root -m 0755 "$SCRIPT_DIR/bin/x11-display-setup" /usr/local/bin/x11-display-setup
-install -o root -g root -m 0755 "$SCRIPT_DIR/bin/qlcplus-run" /usr/local/bin/qlcplus-run
 install -o root -g root -m 0755 "$SCRIPT_DIR/bin/qlcplus-service" /usr/local/bin/qlcplus-service
 
 install -o root -g root -m 0644 "$SCRIPT_DIR/defaults/x11-display" /etc/default/x11-display
-sed "s#/home/pi#$TARGET_HOME#g" "$SCRIPT_DIR/defaults/qlcplus" > /etc/default/qlcplus
-chown root:root /etc/default/qlcplus
-chmod 0644 /etc/default/qlcplus
+
+# Remove files used by the previous QLC+ launcher architecture.
+rm -f /usr/local/bin/qlcplus-run /etc/default/qlcplus
 
 mkdir -p "$TARGET_HOME/interval/scripts"
 sed "s#/home/pi#$TARGET_HOME#g" "$SCRIPT_DIR/scripts/check-qlc-workspace.sh" > "$TARGET_HOME/interval/scripts/check-qlc-workspace.sh"
