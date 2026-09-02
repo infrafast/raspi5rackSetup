@@ -111,6 +111,10 @@ GUI    : https://raspberrypi-1.tail70348.ts.net/xm/mcp
 
 The MCP administration GUI uses paths relative to the current MCP URL. It therefore works both locally at `/mcp` and through Funnel at `/xm/mcp`.
 
+```
+cd /home/pi/XMSeries-MCP && OSC_HOST=192.168.0.16 OSC_PORT=10024 OSC_PROTOCOL=OSCXR OSC_CHANNEL_COUNT=16 OSC_BUS_COUNT=4 HTTP_HOST=0.0.0.0 HTTP_PORT=8787 npm run start:http
+```
+
 ### QLCPlus-MCP
 
 QLCPlus-MCP listens locally on port `8788`:
@@ -134,6 +138,10 @@ GUI    : https://raspberrypi-1.tail70348.ts.net/qlc/mcp
 ```
 
 The QLCPlus-MCP administration GUI also uses paths relative to the current MCP URL, so status and runtime-log requests continue to work behind the `/qlc` Funnel prefix.
+
+```
+cd /home/pi/QLCPlus-MCP && MCP_TRANSPORT=http HTTP_HOST=0.0.0.0 HTTP_PORT=8788 QLC_NATIVE_HOST=127.0.0.1 QLC_NATIVE_PORT=9998 npm run start:http
+```
 
 ### Expected Funnel state
 
