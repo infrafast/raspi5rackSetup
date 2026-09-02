@@ -59,6 +59,124 @@ Then reboot:
 sudo reboot
 ```
 
+## Public MCP access with Tailscale Funnel
+
+Tailscale Funnel can expose the rack MCP servers over public HTTPS without router port forwarding or a separately purchased domain. The MCP services themselves remain local to the Raspberry Pi; Funnel publishes selected local HTTP ports through the Raspberry Pi's stable `*.ts.net` hostname.
+
+Install and connect Tailscale once:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+```
+
+After authentication, check the device and Funnel state with:
+
+```bash
+tailscale status
+sudo tailscale funnel status
+```
+
+### XMSeries-MCP
+
+XMSeries-MCP normally listens locally on port `8787`:
+
+```text
+http://127.0.0.1:8787/mcp
+```
+
+Publish it on the default public HTTPS port `443`:
+
+```bash
+sudo tailscale funnel --bg 8787
+```
+
+Current rack endpoint:
+
+```text
+https://raspberrypi-1.tail70348.ts.net/mcp
+```
+
+Health check:
+
+```text
+https://raspberrypi-1.tail70348.ts.net/health
+```
+
+### QLCPlus-MCP
+
+QLCPlus-MCP normally listens locally on port `8788`:
+
+```text
+http://127.0.0.1:8788/mcp
+```
+
+Because port `443` is already used by XMSeries-MCP, publish QLCPlus-MCP on Funnel HTTPS port `8443`:
+
+```bash
+sudo tailscale funnel --https=8443 --bg http://127.0.0.1:8788
+```
+
+Current rack endpoint:
+
+```text
+https://raspberrypi-1.tail70348.ts.net:8443/mcp
+```
+
+Health check:
+
+```text
+https://raspberrypi-1.tail70348.ts.net:8443/health
+```
+
+The expected Funnel layout is therefore:
+
+```text
+Internet / Claude / MCP client
+        │
+        ├─ HTTPS 443  → Tailscale Funnel → 127.0.0.1:8787 → XMSeries-MCP
+        │
+        └─ HTTPS 8443 → Tailscale Funnel → 127.0.0.1:8788 → QLCPlus-MCP
+```
+
+Both servers use **stateless Streamable HTTP**, so clients keep the same `/mcp` URL across Raspberry Pi or MCP service restarts and do not depend on a server-side `Mcp-Session-Id` surviving the reboot.
+
+### Claude or another MCP-compatible agent
+
+For Claude, add each public URL as a separate custom/remote MCP connector:
+
+```text
+XMSeries-MCP  : https://raspberrypi-1.tail70348.ts.net/mcp
+QLCPlus-MCP   : https://raspberrypi-1.tail70348.ts.net:8443/mcp
+```
+
+For agents that use JSON MCP configuration, the equivalent configuration is:
+
+```json
+{
+  "mcpServers": {
+    "mixer": {
+      "type": "streamable-http",
+      "url": "https://raspberrypi-1.tail70348.ts.net/mcp"
+    },
+    "qlcplus": {
+      "type": "streamable-http",
+      "url": "https://raspberrypi-1.tail70348.ts.net:8443/mcp"
+    }
+  }
+}
+```
+
+The same Streamable HTTP endpoints can be used by OpenAI/ChatGPT-compatible MCP clients or other agents that support remote MCP servers.
+
+If `MCP_AUTH_TOKEN` or bearer authentication is enabled on either MCP server, configure the client with the matching header:
+
+```text
+Authorization: Bearer <token>
+```
+
+Do not expose a stage-control MCP publicly without authentication unless it is a deliberate temporary test: these MCP servers can perform real mixer or lighting actions.
+
 ## Main configuration files
 
 - `/etc/default/x11-display`
