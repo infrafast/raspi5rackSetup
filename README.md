@@ -61,7 +61,17 @@ sudo reboot
 
 ## Public MCP access with Tailscale Funnel
 
-Tailscale Funnel can expose the rack MCP servers over public HTTPS without router port forwarding or a separately purchased domain. The MCP services themselves remain local to the Raspberry Pi; Funnel publishes selected local HTTP ports through the Raspberry Pi's stable `*.ts.net` hostname.
+Tailscale Funnel exposes the rack MCP servers over public HTTPS without router port forwarding or a separately purchased domain. Both MCP services remain bound locally on the Raspberry Pi; Funnel publishes them through the Raspberry Pi's stable `*.ts.net` hostname.
+
+The validated rack setup uses **one public HTTPS endpoint on port 443** and mounts each MCP server below its own path:
+
+```text
+https://raspberrypi-1.tail70348.ts.net
+        ├─ /xm  → 127.0.0.1:8787 → XMSeries-MCP
+        └─ /qlc → 127.0.0.1:8788 → QLCPlus-MCP
+```
+
+This avoids exposing QLCPlus-MCP on an explicit `:8443` URL, which was rejected by Claude during testing.
 
 Install and connect Tailscale once:
 
@@ -79,75 +89,83 @@ sudo tailscale funnel status
 
 ### XMSeries-MCP
 
-XMSeries-MCP normally listens locally on port `8787`:
+XMSeries-MCP listens locally on port `8787`:
 
 ```text
 http://127.0.0.1:8787/mcp
 ```
 
-Publish it on the default public HTTPS port `443`:
+Publish it under `/xm` on the default Funnel HTTPS port `443`:
 
 ```bash
-sudo tailscale funnel --bg 8787
+sudo tailscale funnel --https=443 --set-path=/xm --bg 8787
 ```
 
-Current rack endpoint:
+Validated public endpoints:
 
 ```text
-https://raspberrypi-1.tail70348.ts.net/mcp
+MCP    : https://raspberrypi-1.tail70348.ts.net/xm/mcp
+Health : https://raspberrypi-1.tail70348.ts.net/xm/health
+GUI    : https://raspberrypi-1.tail70348.ts.net/xm/mcp
 ```
 
-Health check:
-
-```text
-https://raspberrypi-1.tail70348.ts.net/health
-```
+The MCP administration GUI uses paths relative to the current MCP URL. It therefore works both locally at `/mcp` and through Funnel at `/xm/mcp`.
 
 ### QLCPlus-MCP
 
-QLCPlus-MCP normally listens locally on port `8788`:
+QLCPlus-MCP listens locally on port `8788`:
 
 ```text
 http://127.0.0.1:8788/mcp
 ```
 
-Because port `443` is already used by XMSeries-MCP, publish QLCPlus-MCP on Funnel HTTPS port `8443`:
+Publish it under `/qlc` on the same public HTTPS port `443`:
 
 ```bash
-sudo tailscale funnel --https=8443 --bg http://127.0.0.1:8788
+sudo tailscale funnel --https=443 --set-path=/qlc --bg 8788
 ```
 
-Current rack endpoint:
+Validated public endpoints:
 
 ```text
-https://raspberrypi-1.tail70348.ts.net:8443/mcp
+MCP    : https://raspberrypi-1.tail70348.ts.net/qlc/mcp
+Health : https://raspberrypi-1.tail70348.ts.net/qlc/health
+GUI    : https://raspberrypi-1.tail70348.ts.net/qlc/mcp
 ```
 
-Health check:
+The QLCPlus-MCP administration GUI also uses paths relative to the current MCP URL, so status and runtime-log requests continue to work behind the `/qlc` Funnel prefix.
 
-```text
-https://raspberrypi-1.tail70348.ts.net:8443/health
-```
+### Expected Funnel state
 
-The expected Funnel layout is therefore:
+The current validated layout is:
 
 ```text
 Internet / Claude / MCP client
         │
-        ├─ HTTPS 443  → Tailscale Funnel → 127.0.0.1:8787 → XMSeries-MCP
-        │
-        └─ HTTPS 8443 → Tailscale Funnel → 127.0.0.1:8788 → QLCPlus-MCP
+        └─ HTTPS 443
+              ↓
+        Tailscale Funnel
+              ├─ /xm  → http://127.0.0.1:8787
+              └─ /qlc → http://127.0.0.1:8788
 ```
 
-Both servers use **stateless Streamable HTTP**, so clients keep the same `/mcp` URL across Raspberry Pi or MCP service restarts and do not depend on a server-side `Mcp-Session-Id` surviving the reboot.
+`sudo tailscale funnel status` should show a layout equivalent to:
+
+```text
+https://raspberrypi-1.tail70348.ts.net (Funnel on)
+|-- /xm  proxy http://127.0.0.1:8787
+|-- /qlc proxy http://127.0.0.1:8788
+```
+
+Both servers use **stateless Streamable HTTP**. Clients therefore keep the same `/mcp` URL across Raspberry Pi or MCP service restarts and do not depend on a server-side `Mcp-Session-Id` surviving a reboot.
 
 ### Claude or another MCP-compatible agent
 
 For Claude, add each public URL as a separate custom/remote MCP connector:
 
 ```text
-XMSeries-MCP  : https://raspberrypi-1.tail70348.ts.net/mcp
-QLCPlus-MCP   : https://raspberrypi-1.tail70348.ts.net:8443/mcp
+XMSeries-MCP  : https://raspberrypi-1.tail70348.ts.net/xm/mcp
+QLCPlus-MCP   : https://raspberrypi-1.tail70348.ts.net/qlc/mcp
 ```
 
 For agents that use JSON MCP configuration, the equivalent configuration is:
@@ -157,25 +175,67 @@ For agents that use JSON MCP configuration, the equivalent configuration is:
   "mcpServers": {
     "mixer": {
       "type": "streamable-http",
-      "url": "https://raspberrypi-1.tail70348.ts.net/mcp"
+      "url": "https://raspberrypi-1.tail70348.ts.net/xm/mcp"
     },
     "qlcplus": {
       "type": "streamable-http",
-      "url": "https://raspberrypi-1.tail70348.ts.net:8443/mcp"
+      "url": "https://raspberrypi-1.tail70348.ts.net/qlc/mcp"
     }
   }
 }
 ```
 
-The same Streamable HTTP endpoints can be used by OpenAI/ChatGPT-compatible MCP clients or other agents that support remote MCP servers.
+The same Streamable HTTP endpoints remain usable by LiveStageAssistant and other MCP clients that use the 2025-era MCP protocol.
 
-If `MCP_AUTH_TOKEN` or bearer authentication is enabled on either MCP server, configure the client with the matching header:
+### MCP protocol compatibility
+
+The current XMSeries-MCP and QLCPlus-MCP servers intentionally remain on the stable v1 TypeScript MCP SDK so existing clients such as LiveStageAssistant keep their current behavior.
+
+Claude may initially send:
+
+```text
+MCP-Protocol-Version: 2026-07-28
+```
+
+The servers detect that version and present the request to the current SDK using the supported legacy version:
+
+```text
+2025-11-25
+```
+
+A log entry such as the following is therefore expected when Claude connects:
+
+```text
+MCP 2026-07-28 request detected; using legacy 2025 compatibility for client fallback
+```
+
+This compatibility layer does not modify requests from existing 2025-era clients, including LiveStageAssistant. A future native migration to the MCP SDK v2 can add first-class `2026-07-28` support separately without changing the public Funnel URLs.
+
+### Authentication
+
+During temporary testing the MCP servers may run without HTTP authentication. For production or unattended public exposure, enable authentication because these MCP servers can perform real mixer and lighting actions.
+
+XMSeries-MCP supports `MCP_AUTH_TOKEN`. QLCPlus-MCP supports bearer authentication through its MCP auth configuration. When authentication is enabled, configure the client with the corresponding header:
 
 ```text
 Authorization: Bearer <token>
 ```
 
-Do not expose a stage-control MCP publicly without authentication unless it is a deliberate temporary test: these MCP servers can perform real mixer or lighting actions.
+Do not expose a stage-control MCP publicly without authentication unless it is a deliberate temporary test.
+
+### Removing Funnel rules
+
+Remove only the individual mount without resetting the rest of the Funnel configuration:
+
+```bash
+sudo tailscale funnel --https=443 --set-path=/xm off
+```
+
+```bash
+sudo tailscale funnel --https=443 --set-path=/qlc off
+```
+
+Avoid `tailscale funnel reset` unless the intention is to erase the complete Funnel configuration.
 
 ## Main configuration files
 
