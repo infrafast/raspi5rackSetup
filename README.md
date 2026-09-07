@@ -61,14 +61,15 @@ sudo reboot
 
 ## Public MCP access with Tailscale Funnel
 
-Tailscale Funnel exposes the rack MCP servers over public HTTPS without router port forwarding or a separately purchased domain. Both MCP services remain bound locally on the Raspberry Pi; Funnel publishes them through the Raspberry Pi's stable `*.ts.net` hostname.
+Tailscale Funnel exposes the rack services over public HTTPS without router port forwarding or a separately purchased domain. The services remain bound locally on the Raspberry Pi; Funnel publishes them through the Raspberry Pi's stable `*.ts.net` hostname.
 
-The validated rack setup uses **one public HTTPS endpoint on port 443** and mounts each MCP server below its own path:
+The validated rack setup uses **one public HTTPS endpoint on port 443** and mounts each service below its own path:
 
 ```text
 https://raspberrypi-1.tail70348.ts.net
         ├─ /xm  → 127.0.0.1:8787 → XMSeries-MCP
-        └─ /qlc → 127.0.0.1:8788 → QLCPlus-MCP
+        ├─ /qlc → 127.0.0.1:8788 → QLCPlus-MCP
+        └─ /lsa → 127.0.0.1:8765 → LiveStageAssistant
 ```
 
 This avoids exposing QLCPlus-MCP on an explicit `:8443` URL, which was rejected by Claude during testing.
@@ -143,6 +144,26 @@ The QLCPlus-MCP administration GUI also uses paths relative to the current MCP U
 cd /home/pi/QLCPlus-MCP && MCP_TRANSPORT=http HTTP_HOST=0.0.0.0 HTTP_PORT=8788 QLC_NATIVE_HOST=127.0.0.1 QLC_NATIVE_PORT=9998 npm run start:http
 ```
 
+### LiveStageAssistant
+
+LiveStageAssistant listens locally on port `8765`:
+
+```text
+http://127.0.0.1:8765
+```
+
+Publish it under `/lsa` on the same public HTTPS port `443`:
+
+```bash
+sudo tailscale funnel --https=443 --set-path=/lsa --bg 8765
+```
+
+The public base URL is then:
+
+```text
+https://raspberrypi-1.tail70348.ts.net/lsa
+```
+
 ### Expected Funnel state
 
 The current validated layout is:
@@ -154,7 +175,8 @@ Internet / Claude / MCP client
               ↓
         Tailscale Funnel
               ├─ /xm  → http://127.0.0.1:8787
-              └─ /qlc → http://127.0.0.1:8788
+              ├─ /qlc → http://127.0.0.1:8788
+              └─ /lsa → http://127.0.0.1:8765
 ```
 
 `sudo tailscale funnel status` should show a layout equivalent to:
@@ -163,9 +185,10 @@ Internet / Claude / MCP client
 https://raspberrypi-1.tail70348.ts.net (Funnel on)
 |-- /xm  proxy http://127.0.0.1:8787
 |-- /qlc proxy http://127.0.0.1:8788
+|-- /lsa proxy http://127.0.0.1:8765
 ```
 
-Both servers use **stateless Streamable HTTP**. Clients therefore keep the same `/mcp` URL across Raspberry Pi or MCP service restarts and do not depend on a server-side `Mcp-Session-Id` surviving a reboot.
+Both MCP servers use **stateless Streamable HTTP**. Clients therefore keep the same `/mcp` URL across Raspberry Pi or MCP service restarts and do not depend on a server-side `Mcp-Session-Id` surviving a reboot.
 
 ### Claude or another MCP-compatible agent
 
@@ -241,6 +264,10 @@ sudo tailscale funnel --https=443 --set-path=/xm off
 
 ```bash
 sudo tailscale funnel --https=443 --set-path=/qlc off
+```
+
+```bash
+sudo tailscale funnel --https=443 --set-path=/lsa off
 ```
 
 Avoid `tailscale funnel reset` unless the intention is to erase the complete Funnel configuration.
